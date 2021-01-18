@@ -7,12 +7,13 @@ using UnityEngine;
 
 
 public class Client : MonoBehaviour {
-    public static Client instance;
+    public static Client singletonInstance;
     public static int dataBufferSize = 4096;
     public string ip = "127.0.0.1";
     public int port = 26950;
-    public int ClientId { get; set; }
+    public int clientId;
     public TCP tcp;
+    public UDP udp;
 
     private delegate void PacketHandler(Packet packet);
 
@@ -20,9 +21,9 @@ public class Client : MonoBehaviour {
 
     private void Awake() {
         print("Thread manager init");
-        if (instance == null) {
-            instance = this;
-        } else if(instance != this) {
+        if (singletonInstance == null) {
+            singletonInstance = this;
+        } else if(singletonInstance != this) {
             Debug.Log("Instance already exists, destroying object");
             Destroy(this);
         }
@@ -30,6 +31,7 @@ public class Client : MonoBehaviour {
 
     private void Start() {
         tcp = new TCP();
+        udp = new UDP();
     }
 
     public void ConnectToServer() {
@@ -49,7 +51,7 @@ public class Client : MonoBehaviour {
                 ReceiveBufferSize = dataBufferSize,
                 SendBufferSize = dataBufferSize
             };
-            socket.BeginConnect(instance.ip, instance.port, ConnectCallBack, socket);
+            socket.BeginConnect(singletonInstance.ip, singletonInstance.port, ConnectCallBack, socket);
         }
 
         private void ConnectCallBack(IAsyncResult result) {
@@ -107,11 +109,81 @@ public class Client : MonoBehaviour {
             if(packetLength <= 1) return true;
             return false;
         }
+
+        public void SendData(Packet packet) {
+            try {
+                if (socket != null) {
+                    stream.BeginWrite(packet.ToArray(), 0, packet.Length(), null, null);
+                }
+            } catch(Exception exception) {
+                Debug.Log($"Error sending packet : -- Error:\n{exception}");
+            }
+        }
+    }
+
+    public class UDP {
+        public UdpClient socket;
+        public IPEndPoint endPoint;
+
+        public UDP() {
+            endPoint = new IPEndPoint(IPAddress.Parse(singletonInstance.ip), singletonInstance.port);
+        }
+
+        public void Connect(int localPort) {
+            socket = new UdpClient(localPort);
+            socket.Connect(endPoint);
+            socket.BeginReceive(ReceiveCallback, null);
+
+            using (Packet packet = new Packet()) {
+                SendData(packet);
+            }
+        }
+
+        public void SendData(Packet packet) {
+            try {
+                packet.InsertInt(singletonInstance.clientId);
+                if (socket != null) {
+                    socket.BeginSend(packet.ToArray(),
+                        packet.Length(), null, null);
+                }
+            } catch {
+                Debug.Log($"Error: sending UDP Data to server: -- Error \n");  
+            }
+        }
+
+        
+        private void ReceiveCallback(IAsyncResult result) {
+            try {
+                byte[] data = socket.EndReceive(result, ref endPoint);
+                socket.BeginReceive(ReceiveCallback, null);
+
+                if (data.Length < 4) return; // Todo : ### Disconnect ### //
+                HandleData(data);
+            } catch (Exception exception) {
+                Debug.Log($"Error in UDP callback -- Error: \n{exception}");
+                // Todo : ### Disconnect ### //
+            }
+        }
+
+        private void HandleData(byte[] data) {
+            using (Packet packet = new Packet(data)) {
+                int packetLength = packet.ReadInt();
+                data = packet.ReadBytes(packetLength);
+            }
+                
+            ThreadManager.ExecuteOnMainThread(() => {
+                using (Packet packet = new Packet(data)) {
+                    int packetId = packet.ReadInt();
+                    _packetHandlers[packetId](packet);
+                }    
+            });
+        }
     }
 
     private void InitClientData() {
         _packetHandlers = new Dictionary<int, PacketHandler>()  {
-            {(int) ServerPacketsEnum.Welcome, ClientHandle.Welcome}
+            {(int) ServerPacketsEnum.Welcome, ClientHandle.Welcome},
+            {(int) ServerPacketsEnum.UdpTest, ClientHandle.UdpTest}
         };
         Debug.Log("Initialised package handlers, packet handler length : " + _packetHandlers.Count);
     }

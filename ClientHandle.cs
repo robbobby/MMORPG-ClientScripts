@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Net;
 using UnityEngine;
 
 public class ClientHandle : MonoBehaviour {
@@ -8,7 +9,14 @@ public class ClientHandle : MonoBehaviour {
         int id = packet.ReadInt();
         
         Debug.Log($"Data from server : {message}");
-        Client.instance.ClientId = id;
-        // Todo: ### Reply welcome back to server ### //
+        Client.singletonInstance.clientId = id;
+        ClientSend.WelcomeReceived();
+        Client.singletonInstance.udp.Connect(((IPEndPoint)Client.singletonInstance.tcp.socket.Client.LocalEndPoint).Port);
+    }
+
+    public static void UdpTest(Packet packet) {
+        string message = packet.ReadString();
+        Debug.Log($"RECEIVED PACKAGE VIA UDP. Contains message: {message}");
+        ClientSend.UdpTestReceived();
     }
 }

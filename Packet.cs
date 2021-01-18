@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Text;
 
  public enum ServerPacketsEnum {
-        Welcome = 1
+        Welcome = 1,
+        UdpTest
     }
 
     /// <summary>Sent from client to server.</summary>
     public enum ClientPackets {
-        WelcomeReceived = 1
+        WelcomeReceived = 1,
+        UdpTestReceived
     }
 
 public class Packet : IDisposable {
@@ -314,5 +316,13 @@ public class Packet : IDisposable {
     public void Dispose() {
         Dispose(true);
         GC.SuppressFinalize(this);
+    }
+/// <summary>
+///     Call this first to read the length of the package.
+///     Essentially just calls the ReadInt function, but this is more readable
+/// </summary>
+/// <returns></returns>
+    public int ReadPackageLength() {
+        return ReadInt();
     }
 }
