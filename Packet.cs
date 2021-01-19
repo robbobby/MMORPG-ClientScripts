@@ -2,10 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
- public enum ServerPacketsEnum {
-        Welcome = 1,
-        UdpTest
-    }
+
 
     /// <summary>Sent from client to server.</summary>
     public enum ClientPackets {

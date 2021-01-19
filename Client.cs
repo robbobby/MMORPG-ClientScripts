@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using Network.Handlers;
 using UnityEngine;
 
 
@@ -15,7 +15,7 @@ public class Client : MonoBehaviour {
     public TCP Tcp;
     public UDP Udp;
 
-    private delegate void PacketHandler(Packet packet);
+    public delegate void PacketHandler(Packet packet);
 
     private static Dictionary<int, PacketHandler> _packetHandlers;
 
@@ -178,10 +178,7 @@ public class Client : MonoBehaviour {
     }
 
     private void InitClientData() {
-        _packetHandlers = new Dictionary<int, PacketHandler> {
-            {(int) ServerPacketsEnum.Welcome, ClientHandle.Welcome},
-            {(int) ServerPacketsEnum.UdpTest, ClientHandle.UdpTest}
-        };
+        _packetHandlers = PacketsToHandle.GetPackages();
         Debug.Log("Initialised package handlers, packet handler length : " + _packetHandlers.Count);
     }
 }
