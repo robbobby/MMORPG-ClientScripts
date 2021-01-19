@@ -4,20 +4,20 @@ public class ClientSend : MonoBehaviour{
     private static void SendTcpData(Packet packet) {
         packet.WriteLength();
         Debug.Log("Sending Tcp package");
-        Client.singletonInstance.tcp.SendData(packet);
+        Client.SingletonInstance.Tcp.SendData(packet);
     }
 
     private static void SendUdpData(Packet packet) {
         packet.WriteLength();
         Debug.Log("Sending Udp package");
-        Client.singletonInstance.udp.SendData(packet);
+        Client.SingletonInstance.Udp.SendData(packet);
     }
     
     #region Packets
 
     public static void WelcomeReceived() {
         using (Packet packet = new Packet((int) ClientPackets.WelcomeReceived)) {
-            packet.Write(Client.singletonInstance.clientId);
+            packet.Write(Client.SingletonInstance.clientId);
             packet.Write(UIManager.SingletonInstance.userNameField.text);
             SendTcpData(packet);
         }

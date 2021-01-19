@@ -7,13 +7,13 @@ using UnityEngine;
 
 
 public class Client : MonoBehaviour {
-    public static Client singletonInstance;
-    public static int dataBufferSize = 4096;
+    public static Client SingletonInstance;
+    private const int DATA_BUFFER_SIZE = 4096;
     public string ip = "127.0.0.1";
     public int port = 26950;
     public int clientId;
-    public TCP tcp;
-    public UDP udp;
+    public TCP Tcp;
+    public UDP Udp;
 
     private delegate void PacketHandler(Packet packet);
 
@@ -21,48 +21,48 @@ public class Client : MonoBehaviour {
 
     private void Awake() {
         print("Thread manager init");
-        if (singletonInstance == null) {
-            singletonInstance = this;
-        } else if(singletonInstance != this) {
+        if (SingletonInstance == null) {
+            SingletonInstance = this;
+        } else if(SingletonInstance != this) {
             Debug.Log("Instance already exists, destroying object");
             Destroy(this);
         }
     }
 
     private void Start() {
-        tcp = new TCP();
-        udp = new UDP();
+        Tcp = new TCP();
+        Udp = new UDP();
     }
 
     public void ConnectToServer() {
         InitClientData();
-        tcp.Connect();
+        Tcp.Connect();
     }
 
     public class TCP {
         private Packet receivedData;
-        public TcpClient socket;
+        public TcpClient Socket;
         private NetworkStream stream;
         private byte[] receiveBuffer;
 
         public void Connect() {
-            receiveBuffer = new byte[dataBufferSize];
-            socket = new TcpClient {
-                ReceiveBufferSize = dataBufferSize,
-                SendBufferSize = dataBufferSize
+            receiveBuffer = new byte[DATA_BUFFER_SIZE];
+            Socket = new TcpClient {
+                ReceiveBufferSize = DATA_BUFFER_SIZE,
+                SendBufferSize = DATA_BUFFER_SIZE
             };
-            socket.BeginConnect(singletonInstance.ip, singletonInstance.port, ConnectCallBack, socket);
+            Socket.BeginConnect(SingletonInstance.ip, SingletonInstance.port, ConnectCallBack, Socket);
         }
 
         private void ConnectCallBack(IAsyncResult result) {
-            socket.EndConnect(result);
-            if (!socket.Connected) {
+            Socket.EndConnect(result);
+            if (!Socket.Connected) {
                 return;
             }
 
-            stream = socket.GetStream();
+            stream = Socket.GetStream();
             receivedData = new Packet();
-            stream.BeginRead(receiveBuffer, 0, dataBufferSize, ReceiveCallBack, null);
+            stream.BeginRead(receiveBuffer, 0, DATA_BUFFER_SIZE, ReceiveCallBack, null);
         }
 
         private void ReceiveCallBack(IAsyncResult result) {
@@ -77,7 +77,7 @@ public class Client : MonoBehaviour {
                     
                 // Handle the data
                 receivedData.Reset(HandleData(data));
-                stream.BeginRead(receiveBuffer,0,  dataBufferSize, ReceiveCallBack, null);
+                stream.BeginRead(receiveBuffer,0,  DATA_BUFFER_SIZE, ReceiveCallBack, null);
             } catch (Exception exception) {
                 Console.WriteLine($"An error occured : {exception}");
                 // Todo : Disconnect the client
@@ -101,18 +101,16 @@ public class Client : MonoBehaviour {
                     }
                 });
                 packetLength = 0;
-                if (receivedData.UnreadLength() > 4) {
-                    packetLength = receivedData.ReadInt();
-                    if (packetLength <= 0) return true;
-                }
+                if (receivedData.UnreadLength() <= 4) continue;
+                packetLength = receivedData.ReadInt();
+                if (packetLength <= 0) return true;
             }
-            if(packetLength <= 1) return true;
-            return false;
+            return packetLength <= 1;
         }
 
         public void SendData(Packet packet) {
             try {
-                if (socket != null) {
+                if (Socket != null) {
                     stream.BeginWrite(packet.ToArray(), 0, packet.Length(), null, null);
                 }
             } catch(Exception exception) {
@@ -121,18 +119,19 @@ public class Client : MonoBehaviour {
         }
     }
 
+    // ReSharper disable once InconsistentNaming
     public class UDP {
-        public UdpClient socket;
-        public IPEndPoint endPoint;
+        private UdpClient Socket { get; set; }
+        private IPEndPoint endPoint;
 
         public UDP() {
-            endPoint = new IPEndPoint(IPAddress.Parse(singletonInstance.ip), singletonInstance.port);
+            endPoint = new IPEndPoint(IPAddress.Parse(SingletonInstance.ip), SingletonInstance.port);
         }
 
         public void Connect(int localPort) {
-            socket = new UdpClient(localPort);
-            socket.Connect(endPoint);
-            socket.BeginReceive(ReceiveCallback, null);
+            Socket = new UdpClient(localPort);
+            Socket.Connect(endPoint);
+            Socket.BeginReceive(ReceiveCallback, null);
 
             using (Packet packet = new Packet()) {
                 SendData(packet);
@@ -141,11 +140,9 @@ public class Client : MonoBehaviour {
 
         public void SendData(Packet packet) {
             try {
-                packet.InsertInt(singletonInstance.clientId);
-                if (socket != null) {
-                    socket.BeginSend(packet.ToArray(),
-                        packet.Length(), null, null);
-                }
+                packet.InsertInt(SingletonInstance.clientId);
+                Socket?.BeginSend(packet.ToArray(),
+                    packet.Length(), null, null);
             } catch {
                 Debug.Log($"Error: sending UDP Data to server: -- Error \n");  
             }
@@ -154,8 +151,8 @@ public class Client : MonoBehaviour {
         
         private void ReceiveCallback(IAsyncResult result) {
             try {
-                byte[] data = socket.EndReceive(result, ref endPoint);
-                socket.BeginReceive(ReceiveCallback, null);
+                byte[] data = Socket.EndReceive(result, ref endPoint);
+                Socket.BeginReceive(ReceiveCallback, null);
 
                 if (data.Length < 4) return; // Todo : ### Disconnect ### //
                 HandleData(data);
@@ -181,7 +178,7 @@ public class Client : MonoBehaviour {
     }
 
     private void InitClientData() {
-        _packetHandlers = new Dictionary<int, PacketHandler>()  {
+        _packetHandlers = new Dictionary<int, PacketHandler> {
             {(int) ServerPacketsEnum.Welcome, ClientHandle.Welcome},
             {(int) ServerPacketsEnum.UdpTest, ClientHandle.UdpTest}
         };

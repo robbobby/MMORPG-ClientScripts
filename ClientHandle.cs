@@ -9,9 +9,9 @@ public class ClientHandle : MonoBehaviour {
         int id = packet.ReadInt();
         
         Debug.Log($"Data from server : {message}");
-        Client.singletonInstance.clientId = id;
+        Client.SingletonInstance.clientId = id;
         ClientSend.WelcomeReceived();
-        Client.singletonInstance.udp.Connect(((IPEndPoint)Client.singletonInstance.tcp.socket.Client.LocalEndPoint).Port);
+        Client.SingletonInstance.Udp.Connect(((IPEndPoint)Client.SingletonInstance.Tcp.Socket.Client.LocalEndPoint).Port);
     }
 
     public static void UdpTest(Packet packet) {
