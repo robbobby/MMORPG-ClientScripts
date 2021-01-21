@@ -1,7 +1,7 @@
 using UnityEngine;
 
 namespace Network.Crud {
-    public abstract class ClientSend : MonoBehaviour{
+    public abstract class ClientSendPackage : MonoBehaviour{
         protected static void SendTcpData(Packet packet) {
             packet.WriteLength();
             Debug.Log("Sending Tcp package");

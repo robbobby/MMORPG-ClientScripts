@@ -5,7 +5,7 @@ using UnityEngine;
 public class ThreadManager : MonoBehaviour {
     private static readonly List<Action> _ExecuteOnMainThread = new List<Action>();
     private static readonly List<Action> _ExecuteCopiedOnMainThread = new List<Action>();
-    private static bool _actionToExecuteOnMainThread = false;
+    private static bool _actionToExecuteOnMainThread;
     private void Update() {
         UpdateMain();
     }

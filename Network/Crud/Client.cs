@@ -39,6 +39,7 @@ public class Client : MonoBehaviour {
         Tcp.Connect();
     }
 
+    // ReSharper disable once InconsistentNaming
     public class TCP {
         private Packet receivedData;
         public TcpClient Socket;
